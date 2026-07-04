@@ -1,0 +1,13 @@
+# Плагин TourGoldPlate v1.0-SNAPSHOT
+
+plateBlock:
+  world: ""
+  x: 0
+  y: 0
+  z: 0
+
+# Количество денег (amount >= 0)
+reward-amount: 10
+
+# Интервал в тиках для выдачи денег с плиты (tick >= 5)
+reward-tick: 20

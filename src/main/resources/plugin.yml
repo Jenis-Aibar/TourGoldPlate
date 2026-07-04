@@ -1,0 +1,15 @@
+name: TourGoldPlate
+version: '1.0-SNAPSHOT'
+main: com.tourist.tourGoldPlate.TourGoldPlate
+api-version: '1.21'
+
+author: [tourist__]
+
+depend: [Vault]
+
+commands:
+  tourgoldplate:
+    description: Золотая плита
+    aliases: ["gp"]
+    permission: op
+
