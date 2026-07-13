@@ -1,15 +1,17 @@
 name: TourGoldPlate
-version: '1.0-SNAPSHOT'
+version: '2.0-BETA'
 main: com.tourist.tourGoldPlate.TourGoldPlate
 api-version: '1.21'
 
-author: [tourist__]
+author: tourist__
+description: Ивент «Золотая Плита» — стой на плите и получай деньги.
 
 depend: [Vault]
+softdepend: [DecentHolograms]
 
 commands:
   tourgoldplate:
-    description: Золотая плита
     aliases: ["gp"]
+    description: Управление плагином TourGoldPlate
+    usage: /gp help
     permission: op
-
