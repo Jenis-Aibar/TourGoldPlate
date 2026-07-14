@@ -13,12 +13,6 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 
-/**
- * Слушает взаимодействие с золотой лопатой для привязки/удаления плиты.
- *
- * ПКМ по плите — привязать
- * ЛКМ по плите — удалить
- */
 public class PlateSetup implements Listener {
 
     private final TourGoldPlate plugin;
@@ -31,15 +25,12 @@ public class PlateSetup implements Listener {
 
     @EventHandler
     public void onInteract(PlayerInteractEvent event) {
-        // Игнорируем событие для второй руки (дублируется Bukkit'ом)
         if (event.getHand() != EquipmentSlot.HAND) return;
 
         Player player = event.getPlayer();
 
-        // Только с золотой лопатой
         if (player.getInventory().getItemInMainHand().getType() != Material.GOLDEN_SHOVEL) return;
 
-        // Только с правами
         if (!player.hasPermission("tourgoldplate.setup")) {
             player.sendMessage(Component.text("§c[GP] У вас нет прав для настройки плиты."));
             return;
@@ -48,7 +39,6 @@ public class PlateSetup implements Listener {
         Block clicked = event.getClickedBlock();
         if (clicked == null) return;
 
-        // Только по плитам
         if (!Tag.PRESSURE_PLATES.isTagged(clicked.getType())) return;
 
         event.setCancelled(true);
@@ -72,10 +62,9 @@ public class PlateSetup implements Listener {
 
         config.setPlateLocation(block.getLocation());
 
-        // Проверяем конфиг и включаем если всё ок
         if (config.validate()) {
             config.setEnabled(true);
-            plugin.getPlateManager().start();
+            plugin.getPlateManager().restart();
             player.sendMessage(Component.text("§a[GP] Конфиг валиден, плита включена."));
         } else {
             player.sendMessage(Component.text("§c[GP] Конфиг содержит ошибки. Смотрите консоль."));

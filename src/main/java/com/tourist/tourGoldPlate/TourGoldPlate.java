@@ -4,9 +4,7 @@ import com.tourist.tourGoldPlate.command.GpCommand;
 import com.tourist.tourGoldPlate.command.TabComplete;
 import com.tourist.tourGoldPlate.config.ConfigManager;
 import com.tourist.tourGoldPlate.config.MessagesManager;
-import com.tourist.tourGoldPlate.listener.PlateListener;
-import com.tourist.tourGoldPlate.listener.PlateSetup;
-import com.tourist.tourGoldPlate.listener.PlayerQuitListener;
+import com.tourist.tourGoldPlate.listener.*;
 import com.tourist.tourGoldPlate.manager.BossBarManager;
 import com.tourist.tourGoldPlate.manager.HologramManager;
 import com.tourist.tourGoldPlate.manager.PlateManager;
@@ -25,7 +23,6 @@ public final class TourGoldPlate extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        // --- Конфиги ---
         saveDefaultConfig();
         saveResource("messages.yml", false);
 
@@ -33,7 +30,6 @@ public final class TourGoldPlate extends JavaPlugin {
         configManager = new ConfigManager(this);
         configManager.load();
 
-        // --- Vault ---
         if (!setupEconomy()) {
             getLogger().severe("Vault или плагин экономики не найден! Плагин отключается.");
             printBanner(false);
@@ -41,21 +37,19 @@ public final class TourGoldPlate extends JavaPlugin {
             return;
         }
 
-        // --- Менеджеры ---
         bossBarManager = new BossBarManager(this);
         hologramManager = new HologramManager(this);
         plateManager = new PlateManager(this);
 
-        // --- Команды ---
         getCommand("tourgoldplate").setExecutor(new GpCommand(this));
         getCommand("tourgoldplate").setTabCompleter(new TabComplete());
 
-        // --- Слушатели ---
         getServer().getPluginManager().registerEvents(new PlateSetup(this), this);
         getServer().getPluginManager().registerEvents(new PlateListener(this), this);
         getServer().getPluginManager().registerEvents(new PlayerQuitListener(this), this);
+        getServer().getPluginManager().registerEvents(new PlayerDeathListener(this), this);
+        getServer().getPluginManager().registerEvents(new PlayerTeleportListener(this), this);
 
-        // --- Запуск если конфиг валиден ---
         if (configManager.isValid()) {
             plateManager.start();
         }
@@ -79,16 +73,12 @@ public final class TourGoldPlate extends JavaPlugin {
         return true;
     }
 
-    // ─── Геттеры ────────────────────────────────────────────────────────────
-
     public Economy getEconomy() { return economy; }
     public ConfigManager getConfigManager() { return configManager; }
     public MessagesManager getMessagesManager() { return messagesManager; }
     public PlateManager getPlateManager() { return plateManager; }
     public HologramManager getHologramManager() { return hologramManager; }
     public BossBarManager getBossBarManager() { return bossBarManager; }
-
-    // ─── Баннер ─────────────────────────────────────────────────────────────
 
     private void printBanner(boolean enabled) {
         String v = getPluginMeta().getVersion();

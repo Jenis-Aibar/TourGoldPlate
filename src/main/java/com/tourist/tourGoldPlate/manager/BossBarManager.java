@@ -12,32 +12,17 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Управляет BossBar для игрока стоящего на плите.
- *
- * BossBar показывает:
- *  - Название ивента
- *  - Имя игрока стоящего на плите
- *  - Прогресс (всегда полный — это ивент, не HP)
- *
- * Показывается только тому кто стоит на плите.
- * Остальные видят другой текст (что плита занята).
- */
 public class BossBarManager {
 
     private final TourGoldPlate plugin;
 
-    // UUID → его BossBar
     private final Map<UUID, BossBar> bars = new HashMap<>();
 
     public BossBarManager(TourGoldPlate plugin) {
         this.plugin = plugin;
     }
 
-    // ─── Показать BossBar игроку ─────────────────────────────────────────────
-
     public void show(Player player) {
-        // Если уже есть — обновляем
         if (bars.containsKey(player.getUniqueId())) {
             update(player);
             return;
@@ -54,15 +39,11 @@ public class BossBarManager {
         player.showBossBar(bar);
     }
 
-    // ─── Обновить текст ──────────────────────────────────────────────────────
-
     public void update(Player player) {
         BossBar bar = bars.get(player.getUniqueId());
         if (bar == null) return;
         bar.name(buildTitle(player.getName()));
     }
-
-    // ─── Скрыть и удалить ────────────────────────────────────────────────────
 
     public void hide(Player player) {
         hideByUuid(player.getUniqueId());
@@ -87,8 +68,6 @@ public class BossBarManager {
         }
         bars.clear();
     }
-
-    // ─── Построить заголовок ─────────────────────────────────────────────────
 
     private Component buildTitle(String playerName) {
         return Component.text("⚡ ", NamedTextColor.YELLOW)

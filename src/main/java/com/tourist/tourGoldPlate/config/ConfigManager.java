@@ -10,33 +10,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Отвечает только за три вещи:
- *  1. Загрузить данные из config.yml в ConfigData
- *  2. Проверить что данные корректны (validate)
- *  3. Сохранить изменения обратно в config.yml
- *
- * Логика плиты (таймер, награда) — это не его дело, это PlateManager.
- */
 public class ConfigManager {
 
     private final TourGoldPlate plugin;
 
-    // Текущие данные конфига
     private ConfigData data;
 
-    // UUID игрока стоящего на плите — хранится здесь как состояние сессии
     private UUID currentPlayer;
 
-    // Валиден ли последний загруженный конфиг
     private boolean valid;
 
     public ConfigManager(TourGoldPlate plugin) {
         this.plugin = plugin;
         this.data = new ConfigData();
     }
-
-    // ─── Загрузка ────────────────────────────────────────────────────────────
 
     public void load() {
         var cfg = plugin.getConfig();
@@ -58,7 +45,6 @@ public class ConfigManager {
 
         valid = validate();
 
-        // Если конфиг невалиден — плита принудительно выключается
         if (!valid && data.enabled) {
             data.enabled = false;
             plugin.getConfig().set("enabled", false);
@@ -66,12 +52,6 @@ public class ConfigManager {
         }
     }
 
-    // ─── Валидация ───────────────────────────────────────────────────────────
-
-    /**
-     * Собирает все ошибки и выводит их разом — не по одной в разных местах.
-     * Возвращает true если всё ок.
-     */
     public boolean validate() {
         List<String> errors = new ArrayList<>();
 
@@ -79,7 +59,6 @@ public class ConfigManager {
         if (data.world == null || data.world.equalsIgnoreCase("null") || Bukkit.getWorld(data.world) == null) {
             errors.add("  ✖ plate.world: мир '" + data.world + "' не найден");
         } else {
-            // Блок (проверяем только если мир существует)
             var block = Bukkit.getWorld(data.world).getBlockAt(data.x, data.y, data.z);
             if (!Tag.PRESSURE_PLATES.isTagged(block.getType())) {
                 errors.add("  ✖ plate.x/y/z: блок на " + data.x + " " + data.y + " " + data.z + " не является плитой");
@@ -96,12 +75,10 @@ public class ConfigManager {
             errors.add("  ✖ reward.tick: минимум 3, сейчас " + data.tick);
         }
 
-        // FIXED
         if (data.rewardType.equalsIgnoreCase("FIXED") && data.fixedAmount <= 0) {
             errors.add("  ✖ reward.fixed.amount: должно быть больше 0, сейчас " + data.fixedAmount);
         }
 
-        // PER_ONLINE
         if (data.rewardType.equalsIgnoreCase("PER_ONLINE")) {
             if (data.perOnlineBase < 0) {
                 errors.add("  ✖ reward.per-online.base: не может быть отрицательным");
@@ -114,7 +91,6 @@ public class ConfigManager {
             }
         }
 
-        // Звук
         if (data.soundEnabled) {
             try {
                 Sound.valueOf(data.soundName);
@@ -126,28 +102,23 @@ public class ConfigManager {
             }
         }
 
-        // ─── Вывод всех ошибок разом ────────────────────────────────────────
         if (!errors.isEmpty()) {
             plugin.getLogger().warning(" ");
-            plugin.getLogger().warning("  ╔══ Ошибки в config.yml ══╗");
+            plugin.getLogger().warning("  ╔══ Ошибки в config.yml ═════════════╗");
             for (String error : errors) {
                 plugin.getLogger().warning(error);
             }
             plugin.getLogger().warning("  ╚══ Плита выключена до исправления ══╝");
             plugin.getLogger().warning(" ");
+            this.valid = false;
             return false;
         }
 
         plugin.getLogger().info("  ✔ Конфиг проверен, ошибок нет.");
+        this.valid = true;
         return true;
     }
 
-    // ─── Перезагрузка ────────────────────────────────────────────────────────
-
-    /**
-     * Перезагружает конфиг и возвращает true если он стал валидным.
-     * Останавливает/запускает плиту в зависимости от результата.
-     */
     public boolean reload() {
         plugin.reloadConfig();
         load();
@@ -160,8 +131,6 @@ public class ConfigManager {
 
         return valid;
     }
-
-    // ─── Сеттеры (меняют конфиг на лету) ────────────────────────────────────
 
     public boolean setEnabled(boolean value) {
         if (value && !valid) return false;
@@ -181,10 +150,10 @@ public class ConfigManager {
             data.y = location.getBlockY();
             data.z = location.getBlockZ();
         }
-        plugin.getConfig().set("plate.world", data.world);
         plugin.getConfig().set("plate.x", data.x);
         plugin.getConfig().set("plate.y", data.y);
         plugin.getConfig().set("plate.z", data.z);
+        plugin.getConfig().set("plate.world", data.world);
         plugin.saveConfig();
     }
 
@@ -202,46 +171,14 @@ public class ConfigManager {
         data.tick = tick;
         plugin.getConfig().set("reward.tick", tick);
         plugin.saveConfig();
-        // Перезапускаем таймер с новым тиком
         if (valid && data.enabled) {
             plugin.getPlateManager().restart();
         }
         return true;
     }
 
-    public boolean setFixedAmount(int amount) {
-        if (amount <= 0) return false;
-        data.fixedAmount = amount;
-        plugin.getConfig().set("reward.fixed.amount", amount);
-        plugin.saveConfig();
-        valid = validate();
-        return valid;
-    }
-
-    public boolean setPerOnlineBase(int base) {
-        if (base < 0) return false;
-        data.perOnlineBase = base;
-        plugin.getConfig().set("reward.per-online.base", base);
-        plugin.saveConfig();
-        valid = validate();
-        return valid;
-    }
-
-    public boolean setPerOnlinePerPlayer(int perPlayer) {
-        if (perPlayer < 0) return false;
-        data.perOnlinePerPlayer = perPlayer;
-        plugin.getConfig().set("reward.per-online.each-player", perPlayer);
-        plugin.saveConfig();
-        valid = validate();
-        return valid;
-    }
-
-    // ─── Состояние сессии ────────────────────────────────────────────────────
-
     public void setCurrentPlayer(UUID uuid) { this.currentPlayer = uuid; }
     public UUID getCurrentPlayer() { return currentPlayer; }
-
-    // ─── Геттеры данных ──────────────────────────────────────────────────────
 
     public ConfigData getData() { return data; }
     public boolean isEnabled() { return data.enabled; }
@@ -258,7 +195,6 @@ public class ConfigManager {
         if (data.rewardType.equalsIgnoreCase("FIXED")) {
             return data.fixedAmount;
         }
-        // PER_ONLINE: base + (onlinePlayers * perPlayer)
         return data.perOnlineBase + (Bukkit.getOnlinePlayers().size() * data.perOnlinePerPlayer);
     }
 }

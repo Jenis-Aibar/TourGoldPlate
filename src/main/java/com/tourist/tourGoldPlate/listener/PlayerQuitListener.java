@@ -6,10 +6,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
 
-/**
- * Следит за выходом игроков.
- * Если игрок стоявший на плите вышел — очищаем состояние.
- */
 public class PlayerQuitListener implements Listener {
 
     private final ConfigManager config;

@@ -2,6 +2,8 @@ package com.tourist.tourGoldPlate.command;
 
 import com.tourist.tourGoldPlate.TourGoldPlate;
 import com.tourist.tourGoldPlate.config.ConfigManager;
+import com.tourist.tourGoldPlate.config.MessagesManager;
+import com.tourist.tourGoldPlate.manager.PlateManager;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
@@ -11,34 +13,20 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
-/**
- * Обрабатывает команду /gp.
- *
- * Подкоманды:
- *  /gp help
- *  /gp reload
- *  /gp wand
- *  /gp on / off
- *  /gp type fixed|per-online
- *  /gp tick <число>
- *  /gp fixed amount <число>
- *  /gp per-online base <число>
- *  /gp per-online perplayer <число>
- *  /gp config reset
- *
- * Принцип: каждая подкоманда — отдельный приватный метод.
- * Метод onCommand только разбирает аргументы и вызывает нужный метод.
- */
 public class GpCommand implements CommandExecutor {
 
     private final TourGoldPlate plugin;
     private final ConfigManager config;
+    private final PlateManager plate;
+    private final MessagesManager msg;
     private final String version;
 
     public GpCommand(TourGoldPlate plugin) {
         this.plugin = plugin;
         this.config = plugin.getConfigManager();
         this.version = plugin.getPluginMeta().getVersion();
+        this.msg = plugin.getMessagesManager();
+        this.plate = plugin.getPlateManager();
     }
 
     @Override
@@ -63,8 +51,6 @@ public class GpCommand implements CommandExecutor {
             case "off"    -> cmdOff(player);
             case "type"   -> cmdType(player, args);
             case "tick"   -> cmdTick(player, args);
-            case "fixed"  -> cmdFixed(player, args);
-            case "per-online" -> cmdPerOnline(player, args);
             case "config" -> cmdConfig(player, args);
             default -> player.sendMessage(Component.text("§cНеизвестная команда. §6/gp help"));
         }
@@ -83,9 +69,6 @@ public class GpCommand implements CommandExecutor {
                 "§6│ §f/gp on/off §7— включить/выключить плиту\n" +
                 "§6│ §f/gp type <fixed|per-online> §7— режим награды\n" +
                 "§6│ §f/gp tick <число> §7— интервал начислений (тики)\n" +
-                "§6│ §f/gp fixed amount <число> §7— сумма в режиме fixed\n" +
-                "§6│ §f/gp per-online base <число> §7— базовая сумма\n" +
-                "§6│ §f/gp per-online perplayer <число> §7— множитель игроков\n" +
                 "§6│ §f/gp config reset §7— сбросить конфиг\n" +
                 "§6└──────────────────────┘"
         ));
@@ -93,7 +76,9 @@ public class GpCommand implements CommandExecutor {
 
     private void cmdReload(Player player) {
         player.sendMessage(Component.text("§7Перезагрузка конфига..."));
+        msg.reload();
         boolean valid = config.reload();
+        plate.restart();
         if (valid) {
             player.sendMessage(Component.text("§aКонфиг перезагружен и валиден. Плита работает."));
         } else {
@@ -105,8 +90,8 @@ public class GpCommand implements CommandExecutor {
         player.getInventory().addItem(ItemStack.of(Material.GOLDEN_SHOVEL));
         player.sendMessage(Component.text(
                 "§b[GP] Инструмент получен!\n" +
-                "§bПКМ по плите §a— привязать\n" +
-                "§bЛКМ по плите §c— удалить"
+                "§6    ПКМ §bпо плите §a— привязать\n" +
+                "§6    ЛКМ §bпо плите §c— удалить"
         ));
     }
 
@@ -166,51 +151,6 @@ public class GpCommand implements CommandExecutor {
         }
     }
 
-    private void cmdFixed(Player player, String[] args) {
-        // /gp fixed amount <число>
-        if (args.length < 3 || !args[1].equalsIgnoreCase("amount")) {
-            player.sendMessage(Component.text("§cИспользование: /gp fixed amount <число>"));
-            return;
-        }
-        int amount = parsePositiveInt(player, args[2], 1);
-        if (amount < 0) return;
-
-        if (config.setFixedAmount(amount)) {
-            player.sendMessage(Component.text("§aFixed amount изменён на §f" + amount + "$"));
-        } else {
-            player.sendMessage(Component.text("§cСумма должна быть больше 0."));
-        }
-    }
-
-    private void cmdPerOnline(Player player, String[] args) {
-        // /gp per-online base <число>
-        // /gp per-online perplayer <число>
-        if (args.length < 3) {
-            player.sendMessage(Component.text(
-                    "§cИспользование:\n" +
-                    "§c/gp per-online base <число>\n" +
-                    "§c/gp per-online perplayer <число>"
-            ));
-            return;
-        }
-
-        switch (args[1].toLowerCase()) {
-            case "base" -> {
-                int base = parsePositiveInt(player, args[2], 0);
-                if (base < 0) return;
-                config.setPerOnlineBase(base);
-                player.sendMessage(Component.text("§aPerOnline base изменён на §f" + base + "$"));
-            }
-            case "perplayer" -> {
-                int pp = parsePositiveInt(player, args[2], 0);
-                if (pp < 0) return;
-                config.setPerOnlinePerPlayer(pp);
-                player.sendMessage(Component.text("§aPerOnline per-player изменён на §f" + pp + "$"));
-            }
-            default -> player.sendMessage(Component.text("§cНеверный аргумент. base или perplayer."));
-        }
-    }
-
     private void cmdConfig(Player player, String[] args) {
         if (args.length < 2 || !args[1].equalsIgnoreCase("reset")) {
             player.sendMessage(Component.text("§cИспользование: /gp config reset"));
@@ -224,12 +164,6 @@ public class GpCommand implements CommandExecutor {
         player.sendMessage(Component.text("§aКонфиг сброшен до дефолтного."));
     }
 
-    // ─── Вспомогательные ─────────────────────────────────────────────────────
-
-    /**
-     * Парсит строку в int. Если не получается — отправляет сообщение игроку и возвращает -1.
-     * min — минимальное допустимое значение.
-     */
     private int parsePositiveInt(Player player, String input, int min) {
         try {
             int value = Integer.parseInt(input);
